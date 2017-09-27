@@ -1,0 +1,157 @@
+apply plugin: 'eclipse'
+apply plugin: 'java-library'
+apply plugin: "jacoco"
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: "org.sonarqube"
+
+group = 'com.ndr.lib.utils'
+version = '1.0.0'
+
+repositories {
+	jcenter()
+}
+
+dependencies {
+
+	// This dependency is exported to consumers, that is to say found on their compile classpath.
+	api 'com.fasterxml.jackson.core:jackson-databind:2.9.1'
+
+//	// This dependency is used internally, and not exposed to consumers on their own compile classpath.
+//	implementation 'com.google.guava:guava:21.0'
+
+	// Use JUnit test framework
+	testImplementation 'junit:junit:4.12'
+}
+
+buildscript {
+
+	repositories {
+		jcenter()
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+	}
+
+	dependencies {
+		classpath 'org.sonarsource.scanner.gradle:sonarqube-gradle-plugin:2.3'
+	}
+}
+
+eclipse {
+	classpath {
+		downloadSources = true
+	}
+	project {
+		name = 'johnson'
+	}
+}
+
+jar {
+	doLast {
+
+		// Copy a jar file with version number to dist/
+		copy {
+			from "${buildDir}/${libsDirName}/${archiveName}"
+			into "${projectDir}/dist"
+		}
+		assert file("${projectDir}/dist/${archiveName}").exists()
+
+		// Copy a jar file without version number to dist/
+		copy {
+			from ("${buildDir}/${libsDirName}/${archiveName}") {
+				rename "${archiveName}", "${baseName}.${extension}"
+			}
+			into "${projectDir}/dist"
+		}
+		assert file("${projectDir}/dist/${baseName}.${extension}").exists()
+
+		print( "\t${buildDir}/${libsDirName}/${archiveName}\n" );
+		print( "\t${projectDir}/dist/${archiveName}\n" );
+		print( "\t${projectDir}/dist/${baseName}.${extension}\n" );
+	}
+}
+
+task sourceJar(type: Jar) {
+
+	classifier "sources"
+
+	from files(sourceSets.main.java),
+	     files(sourceSets.main.resources),
+	     files(sourceSets.test.java)
+}
+
+publishing {
+	repositories {
+		maven {
+			//url "${buildDir}/repo"	// C:/Users/mickish/git/zen/NetUtils/build/repo/com/lib/utils/NetUtils/1.8.3.1/NetUtils-1.8.3.1.jar
+
+			// http://jenkins.ndr.com:8081/artifactory/simple/libs-release-local/com/ndr/lib/utils/cloud-utils/1.0.0/cloud-utils-1.0.0.jar
+			credentials {
+				username 'admin'
+				password 'password'
+			}
+			url 'http://jenkins.ndr.com:8081/artifactory/simple/libs-release-local/'
+		}
+	}
+
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+
+			artifact sourceJar
+		}
+	}
+}
+
+tasks.withType(JavaCompile) {
+	sourceCompatibility = "1.8"
+	targetCompatibility = "1.8"
+	options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+}
+
+clean {
+	delete 'dist'
+}
+
+jacoco {
+	toolVersion = '0.7.9'
+}
+
+jacocoTestReport {
+	reports {
+		xml.enabled = true
+		html.enabled = true
+	}
+
+	afterEvaluate {
+		classDirectories = files(classDirectories.files.collect {
+			fileTree(dir: it,
+				exclude: ['**/*Test*.*'])
+		})
+	}
+}
+
+test {
+    systemProperty "server.env", System.getProperty("server.env", "dev")
+    testLogging.showStandardStreams = true
+    maxHeapSize = "512m"
+
+  jacoco {
+    enabled = true
+  }
+
+  finalizedBy jacocoTestReport
+}
+
+sonarqube {
+	properties {
+		property "sonar.host.url", "http://rain:9000"
+		property "sonar.projectName", "johnson"
+		property "sonar.projectKey", "ndr:johnson"
+		property "sonar.projectVersion", version
+		property "sonar.scm.disabled", "true"
+		property "sonar.sourceEncoding", "UTF-8"
+	}
+}
+
