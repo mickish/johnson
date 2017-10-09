@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -57,16 +56,17 @@ public final class Serializers {
 		new ThreadLocal<ObjectMapper>() {
 
 			@Override
+			@SuppressWarnings("rawtypes")
 			protected synchronized ObjectMapper initialValue() {
 
 				final ObjectMapper mapper = new ObjectMapper();
 
-				mapper.getSerializerProvider().setNullKeySerializer(new CustomNullKeySerializer(null));
+				mapper.getSerializerProvider().setNullKeySerializer(new CustomObjectKeySerializer<Object>( mapper ));
 
 				final SimpleModule simpleModule = new SimpleModule();
-				simpleModule.addKeySerializer(Boolean.class, new CustomPrimitiveKeySerializer<Boolean>(Boolean.class));
-				simpleModule.addKeySerializer(Integer.class, new CustomPrimitiveKeySerializer<Integer>(Integer.class));
-				simpleModule.addKeySerializer(Number.class, new CustomPrimitiveKeySerializer<Number>(Number.class));
+				simpleModule.addKeySerializer(Boolean.class, new CustomObjectKeySerializer<Boolean>( mapper ));
+				simpleModule.addKeySerializer(Integer.class, new CustomObjectKeySerializer<Integer>( mapper ));
+				simpleModule.addKeySerializer(Number.class, new CustomObjectKeySerializer<Number>( mapper ));
 
 				simpleModule.addKeySerializer(Map.class, new CustomObjectKeySerializer<Map>( mapper ));
 
@@ -87,60 +87,15 @@ public final class Serializers {
 	}
 
 	/**
+	 * Support maps with non-string keys
+	 *
 	 * This is different than com.fasterxml.jackson.databind.ser.std.NullSerializer
 	 * because it uses gen.writeFieldName() to adjust the writer's state, indicating
 	 * that it is writing a key, and that the next thing to be written will be a value.
-	 * It also avoids wrapping the key name in quotes, so that the key is really null.
+	 * It avoids wrapping the key in quotes, so that the key can be null, boolean, a map, etc.
+	 *
+	 * http://heli0s.darktech.org/jackson-serialize-map-with-non-string-key-in-fact-with-any-serializable-key-and-abstract-classes/
 	 */
-	public static class CustomNullKeySerializer extends StdSerializer<Object> {
-
-		private static final long serialVersionUID = 1L;
-
-		public CustomNullKeySerializer (final Class<Object> valueClass) {
-			super( valueClass );
-		}
-
-		@Override
-		public void serialize(final Object nullKey, final JsonGenerator gen, final SerializerProvider unused)
-				throws IOException {
-
-			Arrays.stream( JsonGenerator.Feature.values() )
-				.forEach( f -> {
-					System.out.printf( "%s %s\n", f, gen.isEnabled(f) );
-				} );
-
-			try {
-				gen.disable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
-				gen.writeFieldName("null");
-			} finally {
-				gen.enable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
-			}
-		}
-	}
-
-	/** Don't quote primitive keys like true, false, null, and numbers */
-	public static class CustomPrimitiveKeySerializer<T> extends StdSerializer<T> {
-
-		private static final long serialVersionUID = 1L;
-
-		public CustomPrimitiveKeySerializer (final Class<T> valueClass) {
-			super( valueClass );
-		}
-
-		@Override
-		public void serialize(final T key, final JsonGenerator gen, final SerializerProvider unused)
-				throws IOException {
-
-			try {
-				gen.disable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
-				gen.writeFieldName( key.toString() );
-			} finally {
-				gen.enable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
-			}
-		}
-	}
-
-	/** Support maps with non-string keys */
 	public static class CustomObjectKeySerializer<T> extends JsonSerializer<T>
 	{
 		final ObjectMapper mapper;
@@ -150,12 +105,12 @@ public final class Serializers {
 	    }
 
 	    @Override
-	    public void serialize (final T value, final JsonGenerator gen, final SerializerProvider provider)
+	    public void serialize (final T key, final JsonGenerator gen, final SerializerProvider provider)
 	    		throws IOException
 	    {
 			try {
 				gen.disable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
-				gen.writeFieldName( mapper.writeValueAsString( value ) );
+				gen.writeFieldName( mapper.writeValueAsString( key ) );
 			} finally {
 				gen.enable( JsonGenerator.Feature.QUOTE_FIELD_NAMES );
 			}
