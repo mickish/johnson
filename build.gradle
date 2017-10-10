@@ -10,12 +10,19 @@ version = '1.0.0'
 
 repositories {
 	jcenter()
+    maven {  // for cloud-utils
+        url "http://jenkins.ndr.com:8081/artifactory/simple/libs-release-local/"
+    }
 }
 
 dependencies {
 
 	// This dependency is exported to consumers, that is to say found on their compile classpath.
 	api 'com.fasterxml.jackson.core:jackson-databind:2.9.1'
+	api 'com.ndr.lib.utils:cloud-utils:1.0.3'
+
+	api 'org.glassfish.jersey.core:jersey-client:2.26'
+	api 'org.glassfish.jersey.inject:jersey-hk2:2.26'
 
 //	// This dependency is used internally, and not exposed to consumers on their own compile classpath.
 //	implementation 'com.google.guava:guava:21.0'

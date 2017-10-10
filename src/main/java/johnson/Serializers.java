@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,6 +28,25 @@ public final class Serializers {
 
 	/** Do not create instances of this class */
 	private Serializers() {}
+
+	//--------------------------------------------------
+
+    public static List<Object> listReader (final Object...objs) {
+    	return Arrays.asList( objs );
+    }
+
+    public static Map<String, Object> propertyReader (final Object...objects) {
+		final Map<String,Object> map = new LinkedHashMap<>();
+		for(int i=0; i<objects.length; i+=2) {
+			if( (objects[i] instanceof String) ||
+				(objects[i] instanceof Enum ) ) {
+				map.put( objects[i].toString(), objects[i+1] );
+			} else {
+				throw new IllegalArgumentException(	"expected String or Enum, but got " + objects[i]);
+			}
+		}
+		return map;
+    }
 
 	//--------------------------------------------------
 	//  Date to JSON String conversion routines

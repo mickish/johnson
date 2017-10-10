@@ -2,12 +2,10 @@ package johnson.test;
 
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.After;
@@ -24,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static johnson.Serializers.jDate;
 import static johnson.Serializers.formatDate;
 import static johnson.Serializers.formatDateJsonRpc;
+import static johnson.Serializers.listReader;
 import static johnson.Serializers.parseDateJsonRpc;
+import static johnson.Serializers.propertyReader;
 import static johnson.Serializers.write;
 
 /**
@@ -47,25 +47,6 @@ public class TestSerializers {
     @After
     public void after() {
 		System.out.printf( "...tested %s().\n", testName.getMethodName() );
-    }
-
-	//--------------------------------------------------
-
-    List<?> listReader (final Object...objs) {
-    	return (List<?>) Arrays.asList( objs );
-    }
-
-    Map<String,?> propertyReader (final Object...objects) {
-		final Map<String,Object> map = new LinkedHashMap<>();
-		for(int i=0; i<objects.length; i+=2) {
-			if( (objects[i] instanceof String) ||
-				(objects[i] instanceof Enum ) ) {
-				map.put( objects[i].toString(), objects[i+1] );
-			} else {
-				throw new IllegalArgumentException(	"expected String or Enum, but got " + objects[i]);
-			}
-		}
-		return map;
     }
 
     //--------------------------------------------------
